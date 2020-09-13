@@ -4,7 +4,6 @@ import logging
 import cv2
 import neuralgym as ng
 import tensorflow as tf
-from tensorflow.contrib.framework.python.ops import arg_scope
 
 from neuralgym.models import Model
 from neuralgym.ops.summary_ops import scalar_summary, images_summary
@@ -42,28 +41,31 @@ class InpaintCAModel(Model):
 
         # two stage network
         cnum = 48
-        with tf.variable_scope(name, reuse=reuse), \
-                arg_scope([gen_conv, gen_deconv],
-                          training=training, padding=padding):
+        with tf.compat.v1.variable_scope(name, reuse=reuse):
+            #     arg_scope([gen_conv, gen_deconv],
+            #               training=training, padding=padding):
+            # replace with explicit args
+            #   - training=training, padding=padding for gen_conv and gen_deconv
+
             # stage1
-            x = gen_conv(x, cnum, 5, 1, name='conv1')
-            x = gen_conv(x, 2*cnum, 3, 2, name='conv2_downsample')
-            x = gen_conv(x, 2*cnum, 3, 1, name='conv3')
-            x = gen_conv(x, 4*cnum, 3, 2, name='conv4_downsample')
-            x = gen_conv(x, 4*cnum, 3, 1, name='conv5')
-            x = gen_conv(x, 4*cnum, 3, 1, name='conv6')
+            x = gen_conv(x, cnum, 5, 1, name='conv1', training=training, padding=padding)
+            x = gen_conv(x, 2*cnum, 3, 2, name='conv2_downsample', training=training, padding=padding)
+            x = gen_conv(x, 2*cnum, 3, 1, name='conv3', training=training, padding=padding)
+            x = gen_conv(x, 4*cnum, 3, 2, name='conv4_downsample', training=training, padding=padding)
+            x = gen_conv(x, 4*cnum, 3, 1, name='conv5', training=training, padding=padding)
+            x = gen_conv(x, 4*cnum, 3, 1, name='conv6', training=training, padding=padding)
             mask_s = resize_mask_like(mask, x)
-            x = gen_conv(x, 4*cnum, 3, rate=2, name='conv7_atrous')
-            x = gen_conv(x, 4*cnum, 3, rate=4, name='conv8_atrous')
-            x = gen_conv(x, 4*cnum, 3, rate=8, name='conv9_atrous')
-            x = gen_conv(x, 4*cnum, 3, rate=16, name='conv10_atrous')
-            x = gen_conv(x, 4*cnum, 3, 1, name='conv11')
-            x = gen_conv(x, 4*cnum, 3, 1, name='conv12')
-            x = gen_deconv(x, 2*cnum, name='conv13_upsample')
-            x = gen_conv(x, 2*cnum, 3, 1, name='conv14')
-            x = gen_deconv(x, cnum, name='conv15_upsample')
-            x = gen_conv(x, cnum//2, 3, 1, name='conv16')
-            x = gen_conv(x, 3, 3, 1, activation=None, name='conv17')
+            x = gen_conv(x, 4*cnum, 3, rate=2, name='conv7_atrous', training=training, padding=padding)
+            x = gen_conv(x, 4*cnum, 3, rate=4, name='conv8_atrous', training=training, padding=padding)
+            x = gen_conv(x, 4*cnum, 3, rate=8, name='conv9_atrous', training=training, padding=padding)
+            x = gen_conv(x, 4*cnum, 3, rate=16, name='conv10_atrous', training=training, padding=padding)
+            x = gen_conv(x, 4*cnum, 3, 1, name='conv11', training=training, padding=padding)
+            x = gen_conv(x, 4*cnum, 3, 1, name='conv12', training=training, padding=padding)
+            x = gen_deconv(x, 2*cnum, name='conv13_upsample', training=training, padding=padding)
+            x = gen_conv(x, 2*cnum, 3, 1, name='conv14', training=training, padding=padding)
+            x = gen_deconv(x, cnum, name='conv15_upsample', training=training, padding=padding)
+            x = gen_conv(x, cnum//2, 3, 1, name='conv16', training=training, padding=padding)
+            x = gen_conv(x, 3, 3, 1, activation=None, name='conv17', training=training, padding=padding)
             x = tf.nn.tanh(x)
             x_stage1 = x
 
@@ -73,44 +75,44 @@ class InpaintCAModel(Model):
             # conv branch
             # xnow = tf.concat([x, ones_x, ones_x*mask], axis=3)
             xnow = x
-            x = gen_conv(xnow, cnum, 5, 1, name='xconv1')
-            x = gen_conv(x, cnum, 3, 2, name='xconv2_downsample')
-            x = gen_conv(x, 2*cnum, 3, 1, name='xconv3')
-            x = gen_conv(x, 2*cnum, 3, 2, name='xconv4_downsample')
-            x = gen_conv(x, 4*cnum, 3, 1, name='xconv5')
-            x = gen_conv(x, 4*cnum, 3, 1, name='xconv6')
-            x = gen_conv(x, 4*cnum, 3, rate=2, name='xconv7_atrous')
-            x = gen_conv(x, 4*cnum, 3, rate=4, name='xconv8_atrous')
-            x = gen_conv(x, 4*cnum, 3, rate=8, name='xconv9_atrous')
-            x = gen_conv(x, 4*cnum, 3, rate=16, name='xconv10_atrous')
+            x = gen_conv(xnow, cnum, 5, 1, name='xconv1', training=training, padding=padding)
+            x = gen_conv(x, cnum, 3, 2, name='xconv2_downsample', training=training, padding=padding)
+            x = gen_conv(x, 2*cnum, 3, 1, name='xconv3', training=training, padding=padding)
+            x = gen_conv(x, 2*cnum, 3, 2, name='xconv4_downsample', training=training, padding=padding)
+            x = gen_conv(x, 4*cnum, 3, 1, name='xconv5', training=training, padding=padding)
+            x = gen_conv(x, 4*cnum, 3, 1, name='xconv6', training=training, padding=padding)
+            x = gen_conv(x, 4*cnum, 3, rate=2, name='xconv7_atrous', training=training, padding=padding)
+            x = gen_conv(x, 4*cnum, 3, rate=4, name='xconv8_atrous', training=training, padding=padding)
+            x = gen_conv(x, 4*cnum, 3, rate=8, name='xconv9_atrous', training=training, padding=padding)
+            x = gen_conv(x, 4*cnum, 3, rate=16, name='xconv10_atrous', training=training, padding=padding)
             x_hallu = x
             # attention branch
-            x = gen_conv(xnow, cnum, 5, 1, name='pmconv1')
-            x = gen_conv(x, cnum, 3, 2, name='pmconv2_downsample')
-            x = gen_conv(x, 2*cnum, 3, 1, name='pmconv3')
-            x = gen_conv(x, 4*cnum, 3, 2, name='pmconv4_downsample')
-            x = gen_conv(x, 4*cnum, 3, 1, name='pmconv5')
+            x = gen_conv(xnow, cnum, 5, 1, name='pmconv1', training=training, padding=padding)
+            x = gen_conv(x, cnum, 3, 2, name='pmconv2_downsample', training=training, padding=padding)
+            x = gen_conv(x, 2*cnum, 3, 1, name='pmconv3', training=training, padding=padding)
+            x = gen_conv(x, 4*cnum, 3, 2, name='pmconv4_downsample', training=training, padding=padding)
+            x = gen_conv(x, 4*cnum, 3, 1, name='pmconv5', training=training, padding=padding)
             x = gen_conv(x, 4*cnum, 3, 1, name='pmconv6',
                                 activation=tf.nn.relu)
             x, offset_flow = contextual_attention(x, x, mask_s, 3, 1, rate=2)
-            x = gen_conv(x, 4*cnum, 3, 1, name='pmconv9')
-            x = gen_conv(x, 4*cnum, 3, 1, name='pmconv10')
+            x = gen_conv(x, 4*cnum, 3, 1, name='pmconv9', training=training, padding=padding)
+            x = gen_conv(x, 4*cnum, 3, 1, name='pmconv10', training=training, padding=padding)
             pm = x
             x = tf.concat([x_hallu, pm], axis=3)
 
-            x = gen_conv(x, 4*cnum, 3, 1, name='allconv11')
-            x = gen_conv(x, 4*cnum, 3, 1, name='allconv12')
-            x = gen_deconv(x, 2*cnum, name='allconv13_upsample')
-            x = gen_conv(x, 2*cnum, 3, 1, name='allconv14')
-            x = gen_deconv(x, cnum, name='allconv15_upsample')
-            x = gen_conv(x, cnum//2, 3, 1, name='allconv16')
-            x = gen_conv(x, 3, 3, 1, activation=None, name='allconv17')
+            x = gen_conv(x, 4*cnum, 3, 1, name='allconv11', training=training, padding=padding)
+            x = gen_conv(x, 4*cnum, 3, 1, name='allconv12', training=training, padding=padding)
+            x = gen_deconv(x, 2*cnum, name='allconv13_upsample', training=training, padding=padding)
+            x = gen_conv(x, 2*cnum, 3, 1, name='allconv14', training=training, padding=padding)
+            x = gen_deconv(x, cnum, name='allconv15_upsample', training=training, padding=padding)
+            x = gen_conv(x, cnum//2, 3, 1, name='allconv16', training=training, padding=padding)
+            x = gen_conv(x, 3, 3, 1, activation=None, name='allconv17', training=training, padding=padding)
             x = tf.nn.tanh(x)
             x_stage2 = x
         return x_stage1, x_stage2, offset_flow
 
     def build_sn_patch_gan_discriminator(self, x, reuse=False, training=True):
-        with tf.variable_scope('sn_patch_gan', reuse=reuse):
+        with tf.compat.v1.variable_scope('sn_patch_gan', reuse=reuse):
             cnum = 64
             x = dis_conv(x, cnum, name='conv1', training=training)
             x = dis_conv(x, cnum*2, name='conv2', training=training)
@@ -123,7 +125,7 @@ class InpaintCAModel(Model):
 
     def build_gan_discriminator(
             self, batch, reuse=False, training=True):
-        with tf.variable_scope('discriminator', reuse=reuse):
+        with tf.compat.v1.variable_scope('discriminator', reuse=reuse):
             d = self.build_sn_patch_gan_discriminator(
                 batch, reuse=reuse, training=training)
             return d
@@ -162,8 +164,8 @@ class InpaintCAModel(Model):
         # apply mask and complete image
         batch_complete = batch_predicted*mask + batch_incomplete*(1.-mask)
         # local patches
-        losses['ae_loss'] = FLAGS.l1_loss_alpha * tf.reduce_mean(tf.abs(batch_pos - x1))
-        losses['ae_loss'] += FLAGS.l1_loss_alpha * tf.reduce_mean(tf.abs(batch_pos - x2))
+        losses['ae_loss'] = FLAGS.l1_loss_alpha * tf.reduce_mean(input_tensor=tf.abs(batch_pos - x1))
+        losses['ae_loss'] += FLAGS.l1_loss_alpha * tf.reduce_mean(input_tensor=tf.abs(batch_pos - x2))
         if summary:
             scalar_summary('losses/ae_loss', losses['ae_loss'])
             if FLAGS.guided:
@@ -176,7 +178,7 @@ class InpaintCAModel(Model):
             if offset_flow is not None:
                 viz_img.append(
                     resize(offset_flow, scale=4,
-                           func=tf.image.resize_bilinear))
+                           func=tf.compat.v1.image.resize_bilinear))
             images_summary(
                 tf.concat(viz_img, axis=2),
                 'raw_incomplete_predicted_complete', FLAGS.viz_max_out)
@@ -206,10 +208,10 @@ class InpaintCAModel(Model):
         losses['g_loss'] = FLAGS.gan_loss_alpha * losses['g_loss']
         if FLAGS.ae_loss:
             losses['g_loss'] += losses['ae_loss']
-        g_vars = tf.get_collection(
-            tf.GraphKeys.TRAINABLE_VARIABLES, 'inpaint_net')
-        d_vars = tf.get_collection(
-            tf.GraphKeys.TRAINABLE_VARIABLES, 'discriminator')
+        g_vars = tf.compat.v1.get_collection(
+            tf.compat.v1.GraphKeys.TRAINABLE_VARIABLES, 'inpaint_net')
+        d_vars = tf.compat.v1.get_collection(
+            tf.compat.v1.GraphKeys.TRAINABLE_VARIABLES, 'discriminator')
         return g_vars, d_vars, losses
 
     def build_infer_graph(self, FLAGS, batch_data, bbox=None, name='val'):
@@ -254,7 +256,7 @@ class InpaintCAModel(Model):
         if offset_flow is not None:
             viz_img.append(
                 resize(offset_flow, scale=4,
-                       func=tf.image.resize_bilinear))
+                       func=tf.compat.v1.image.resize_bilinear))
         images_summary(
             tf.concat(viz_img, axis=2),
             name+'_raw_incomplete_complete', FLAGS.viz_max_out)
