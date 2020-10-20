@@ -7,6 +7,8 @@ import neuralgym as ng
 from inpaint_model import InpaintCAModel
 
 
+tf.compat.v1.disable_eager_execution()
+
 def multigpu_graph_def(model, FLAGS, data, gpu_id=0, loss_type='g'):
     with tf.device('/cpu:0'):
         images = data.data_pipeline(FLAGS.batch_size)

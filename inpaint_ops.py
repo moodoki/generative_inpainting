@@ -122,6 +122,29 @@ def random_bbox(FLAGS):
     w = tf.constant(FLAGS.width)
     return (t, l, h, w)
 
+def random_blocks(FLAGS, blocksize=8, name='mask'):
+    def npmask(height, width, blocksize):
+        sm_mask = np.array(np.random.random((height//8, width//8)) < float(FLAGS.mask_prob),
+                           np.float32)
+        _mask = np.zeros((height, width), dtype=np.float32)
+        for i in range(blocksize):
+            for j in range(blocksize):
+                _mask[i::blocksize, j::blocksize] = sm_mask
+        mask = np.expand_dims(_mask, (0, -1))
+        return mask
+    with tf.compat.v1.variable_scope(name), tf.device('/cpu:0'):
+        img_shape = FLAGS.img_shapes
+        height = img_shape[0]
+        width = img_shape[1]
+        mask = tf.compat.v1.py_func(
+            npmask,
+            [height, width, blocksize],
+            tf.float32,
+            stateful=False
+        )
+        mask.set_shape([1] + [height, width] + [1])
+    return mask
+
 
 def bbox2mask(FLAGS, bbox, name='mask'):
     """Generate mask tensor from bbox.

@@ -1,18 +1,18 @@
 # =========================== Basic Settings ===========================
 # machine info
 num_gpus_per_job: 1  # number of gpus each job need
-num_cpus_per_job: 4  # number of gpus each job need
+num_cpus_per_job: 16  # number of gpus each job need
 num_hosts_per_job: 1
-memory_per_job: 32  # number of gpus each job need
-gpu_type: 'nvidia-tesla-p100'
+memory_per_job: 23  # number of gpus each job need
+gpu_type: 'nvidia-titan-rtx'
 
 # parameters
-name: places2_gated_conv_v100  # any name
+name: imagenet_subset  # any name
 model_restore: ''  # logs/places2_gated_conv
-dataset: 'celebahq'  # 'tmnist', 'dtd', 'places2', 'celeba', 'imagenet', 'cityscapes'
-random_crop: False  # Set to false when dataset is 'celebahq', meaning only resize the images to img_shapes, instead of crop img_shapes from a larger raw image. This is useful when you train on images with different resolutions like places2. In these cases, please set random_crop to true.
-val: False  # true if you want to view validation results in tensorboard
-log_dir: logs/full_model_celeba_hq_256
+dataset: 'imagenet'  # 'tmnist', 'dtd', 'places2', 'celeba', 'imagenet', 'cityscapes'
+random_crop: True  # Set to false when dataset is 'celebahq', meaning only resize the images to img_shapes, instead of crop img_shapes from a larger raw image. This is useful when you train on images with different resolutions like places2. In these cases, please set random_crop to true.
+val: True  # true if you want to view validation results in tensorboard
+log_dir: logs/imagenet_block_patches_0.3
 
 gan: 'sngan'
 gan_loss_alpha: 1
@@ -46,11 +46,15 @@ data_flist:
   ]
   # http://www.image-net.org/, please use random_crop: True
   imagenet: [
-    'data/imagenet/train_shuffled.flist',
-    'data/imagenet/validation_static_view.flist',
+    'imagenet_train.flist',
+    'imagenet_val.flist',
+  ]
+  tiny_test: [
+    'examples/examples_out.flist',
+    'examples/examples_out.flist'
   ]
 
-static_view_size: 30
+static_view_size: 16
 img_shapes: [256, 256, 3]
 height: 128
 width: 128
@@ -68,3 +72,7 @@ l1_loss_alpha: 1.
 # to tune
 guided: False
 edge_threshold: 0.6
+
+# mask
+mask_type: random_blocks
+mask_prob: 0.3

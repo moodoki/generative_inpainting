@@ -13,8 +13,10 @@ from neuralgym.ops.gan_ops import gan_hinge_loss
 from neuralgym.ops.gan_ops import random_interpolates
 
 from inpaint_ops import gen_conv, gen_deconv, dis_conv
-from inpaint_ops import random_bbox, bbox2mask, local_patch, brush_stroke_mask
+from inpaint_ops import random_bbox, bbox2mask, local_patch, brush_stroke_mask, random_blocks
 from inpaint_ops import resize_mask_like, contextual_attention
+
+from mask import MaskFnFactory
 
 
 logger = logging.getLogger()
@@ -138,17 +140,32 @@ class InpaintCAModel(Model):
             edge = edge[:, :, :, 0:1] / 255.
             edge = tf.cast(edge > FLAGS.edge_threshold, tf.float32)
         batch_pos = batch_data / 127.5 - 1.
-        # generate mask, 1 represents masked point
-        bbox = random_bbox(FLAGS)
-        regular_mask = bbox2mask(FLAGS, bbox, name='mask_c')
-        irregular_mask = brush_stroke_mask(FLAGS, name='mask_c')
-        mask = tf.cast(
-            tf.logical_or(
-                tf.cast(irregular_mask, tf.bool),
-                tf.cast(regular_mask, tf.bool),
-            ),
-            tf.float32
-        )
+        if FLAGS.mask_type == 'default':
+            # generate mask, 1 represents masked point
+            bbox = random_bbox(FLAGS)
+            regular_mask = bbox2mask(FLAGS, bbox, name='mask_c')
+            irregular_mask = brush_stroke_mask(FLAGS, name='mask_c')
+            mask = tf.cast(
+                tf.logical_or(
+                    tf.cast(irregular_mask, tf.bool),
+                    tf.cast(regular_mask, tf.bool),
+                ),
+                tf.float32
+            )
+        elif FLAGS.mask_type == 'random_blocks':
+            mask = random_blocks(FLAGS, name='mask_random_blocks')
+        elif FLAGS.mask_type == 'dct_fw_4':
+            mask_fn = MaskFnFactory.create_mask_fn('dct_generic',
+                                                   blocksize=8,
+                                                   scoring_fn = 'dct_fw_4',
+                                                   binarizer_fn = 'exclude_0_0.02_-0.7',
+                                                   FLAGS=FLAGS,
+                                                   )
+            mm = mask_fn(batch_data)
+            print(mm)
+            mask = tf.cast(mask_fn(batch_data), tf.float32)/255
+        else:
+            raise ValueError(f'Unknown mask_type {FLAGS.mask_type}', FLAGS.mask_type)
 
         batch_incomplete = batch_pos*(1.-mask)
         if FLAGS.guided:
@@ -221,15 +238,19 @@ class InpaintCAModel(Model):
             batch_data, edge = batch_data
             edge = edge[:, :, :, 0:1] / 255.
             edge = tf.cast(edge > FLAGS.edge_threshold, tf.float32)
-        regular_mask = bbox2mask(FLAGS, bbox, name='mask_c')
-        irregular_mask = brush_stroke_mask(FLAGS, name='mask_c')
-        mask = tf.cast(
-            tf.logical_or(
-                tf.cast(irregular_mask, tf.bool),
-                tf.cast(regular_mask, tf.bool),
-            ),
-            tf.float32
-        )
+
+        if FLAGS.mask_type == 'default':
+            regular_mask = bbox2mask(FLAGS, bbox, name='mask_c')
+            irregular_mask = brush_stroke_mask(FLAGS, name='mask_c')
+            mask = tf.cast(
+                tf.logical_or(
+                    tf.cast(irregular_mask, tf.bool),
+                    tf.cast(regular_mask, tf.bool),
+                ),
+                tf.float32
+            )
+        elif FLAGS.mask_type == 'random_blocks':
+            mask = random_blocks(FLAGS, name='mask_random_blocks')
 
         batch_pos = batch_data / 127.5 - 1.
         batch_incomplete = batch_pos*(1.-mask)
